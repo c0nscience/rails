@@ -101,27 +101,27 @@ resource :sign_up
 We're using a singular resource here because we want a singular route for
 `/sign_up`.
 
-This route directs requests to `app/controllers/sign_ups_controller.rb` so let's
+This route directs requests to `app/controllers/sign_up_controller.rb` so let's
 create that controller file now.
 
 ```ruby
-class SignUpsController < ApplicationController
-  def show
+class SignUpController < ApplicationController
+  def index
     @user = User.new
   end
 end
 ```
 
-We're using the `show` action to create a new `User` instance, which will be
+We're using the `index` action to create a new `User` instance, which will be
 used to display the sign up form.
 
-Let's create the form next. Create `app/views/sign_ups/show.html.erb` with the
+Let's create the form next. Create `app/views/sign_up/index.html.erb` with the
 following code:
 
 ```erb
 <h1>Sign Up</h1>
 
-<%= form_with model: @user, url: sign_up_path do |form| %>
+<%= form_with model: @user, url: sign_up_index_path do |form| %>
   <% if form.object.errors.any? %>
     <div>Error: <%= form.object.errors.full_messages.first %></div>
   <% end %>
@@ -161,17 +161,17 @@ This form collects the user's name, email, and password. We're using the
 `autocomplete` attribute to help the browser suggest the values for these fields
 based on the user's saved information.
 
-You'll also notice we set `url: sign_up_path` in the form alongside
+You'll also notice we set `url: sign_up_index_path` in the form alongside
 `model: @user`. Without this `url:` argument, `form_with` would see we have a
 `User` and send the form to `/users` by default. Since we want the form to
 submit to `/sign_up`, we set the `url:` to override the default route.
 
-Back in `app/controllers/sign_ups_controller.rb` we can handle the form
+Back in `app/controllers/sign_up_controller.rb` we can handle the form
 submission by adding the `create` action.
 
 ```ruby#6-19
-class SignUpsController < ApplicationController
-  def show
+class SignUpController < ApplicationController
+  def index
     @user = User.new
   end
 
@@ -200,7 +200,7 @@ Visit https://localhost:3000/sign_up to try it out.
 
 ### Requiring Unauthenticated Access
 
-Authenticated users can still access `SignUpsController` and create another
+Authenticated users can still access `SignUpController` and create another
 account while they're logged in which is confusing.
 
 Let's fix this by adding a helper to the `Authentication` module in
@@ -231,10 +231,10 @@ module Authentication
 The `unauthenticated_access_only` class method can be used in any controller
 where we want to restrict actions to unauthenticated users only.
 
-We can then use this method at the top of `SignUpsController`.
+We can then use this method at the top of `SignUpController`.
 
 ```ruby#2
-class SignUpsController < ApplicationController
+class SignUpController < ApplicationController
   unauthenticated_access_only
 
   # ...
@@ -252,9 +252,9 @@ Rails makes this easy with the
 method in controllers.
 
 ```ruby#3
-class SignUpsController < ApplicationController
+class SignUpController < ApplicationController
   unauthenticated_access_only
-  rate_limit to: 10, within: 3.minutes, only: :create, with: -> { redirect_to sign_up_path, alert: "Try again later." }
+  rate_limit to: 10, within: 3.minutes, only: :create, with: -> { redirect_to sign_up_index_path, alert: "Try again later." }
 
   # ...
 end
@@ -517,7 +517,7 @@ Open `app/views/layouts/application.html.erb` and update the navbar.
         <%= link_to "Settings", settings_root_path %>
         <%= button_to "Log out", session_path, method: :delete %>
       <% else %>
-        <%= link_to "Sign Up", sign_up_path %>
+        <%= link_to "Sign Up", sign_up_index_path %>
         <%= link_to "Login", new_session_path %>
       <% end %>
     </nav>
@@ -578,7 +578,7 @@ layout using `yield(:content)`.
         <%= link_to "Settings", settings_root_path %>
         <%= button_to "Log out", session_path, method: :delete %>
       <% else %>
-        <%= link_to "Sign Up", sign_up_path %>
+        <%= link_to "Sign Up", sign_up_index_path %>
         <%= link_to "Login", new_session_path %>
       <% end %>
     </nav>
@@ -1596,15 +1596,15 @@ end
 We have a few different things to test for sign up. Let's start with a simple
 test to view the page.
 
-Create a controller test at `test/controllers/sign_ups_controller_test.rb` with
+Create a controller test at `test/controllers/sign_up_controller_test.rb` with
 the following:
 
 ```ruby
 require "test_helper"
 
-class SignUpsControllerTest < ActionDispatch::IntegrationTest
+class SignUpControllerTest < ActionDispatch::IntegrationTest
   test "view sign up" do
-    get sign_up_path
+    get sign_up_index_path
     assert_response :success
   end
 end
@@ -1615,7 +1615,7 @@ This test will visit `/sign_up` and ensure that it receives a 200 OK response.
 Let's run the test and see if it passes:
 
 ```bash
-$ bin/rails test test/controllers/sign_ups_controller_test.rb:4
+$ bin/rails test test/controllers/sign_up_controller_test.rb:4
 Running 1 tests in a single process (parallelization threshold is 50)
 Run options: --seed 5967
 
@@ -1635,7 +1635,7 @@ Add the following test to the file.
 ```ruby
 test "view sign up when authenticated" do
   sign_in_as users(:one)
-  get sign_up_path
+  get sign_up_index_path
   assert_redirected_to root_path
 end
 ```
@@ -1648,7 +1648,7 @@ form.
 ```ruby
 test "successful sign up" do
   assert_difference "User.count" do
-    post sign_up_path, params: { user: { first_name: "Example", last_name: "User", email_address: "example@user.org", password: "password", password_confirmation: "password" } }
+    post sign_up_index_path, params: { user: { first_name: "Example", last_name: "User", email_address: "example@user.org", password: "password", password_confirmation: "password" } }
     assert_redirected_to root_path
   end
 end
@@ -1662,7 +1662,7 @@ Let's also test with invalid data to ensure the controller returns an error.
 ```ruby
 test "invalid sign up" do
   assert_no_difference "User.count" do
-    post sign_up_path, params: { user: { email_address: "example@user.org", password: "password", password_confirmation: "password" } }
+    post sign_up_index_path, params: { user: { email_address: "example@user.org", password: "password", password_confirmation: "password" } }
     assert_response :unprocessable_entity
   end
 end
@@ -1679,7 +1679,7 @@ Another important test to add is ensuring that sign up does not accept the
 ```ruby
 test "sign up ignores admin attribute" do
   assert_difference "User.count" do
-    post sign_up_path, params: { user: { first_name: "Example", last_name: "User", email_address: "example@user.org", password: "password", password_confirmation: "password", admin: true } }
+    post sign_up_index_path, params: { user: { first_name: "Example", last_name: "User", email_address: "example@user.org", password: "password", password_confirmation: "password", admin: true } }
     assert_redirected_to root_path
   end
   refute User.find_by(email_address: "example@user.org").admin?
